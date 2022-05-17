@@ -1,4 +1,5 @@
 import React, { useEffect, useState, Fragment } from "react";
+import ReactLoading from "react-loading";
 import { ethers } from "ethers";
 import { networks } from "./utils/networks";
 import RandomPuppy from "./utils/RandomPuppy.json";
@@ -10,11 +11,12 @@ import ethLogo from "./assets/ethlogo.png";
 import "./App.css";
 
 // Constants
-const CONTRACT_ADDRESS = "0x170f1FE0dBAd5562DDAcCB762dBEc411C136DbA6";
+const CONTRACT_ADDRESS = "0xAac6b1DFab73f408eE66cE27fa630E1e170C3B33";
 
 function App() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [network, setNetwork] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const checkIfWalletIsConnected = async () => {
     const { ethereum } = window;
@@ -31,12 +33,12 @@ function App() {
       const account = accounts[0];
       setCurrentAccount(account);
       console.log("Found an authorized account:", account);
+      setupEventListener();
     } else {
       console.log("No authorized account found");
     }
 
     const chainId = await ethereum.request({ method: "eth_chainId" });
-    console.log(chainId);
     setNetwork(networks[chainId]);
 
     // reload on network change
@@ -56,6 +58,38 @@ function App() {
     const account = accounts[0];
     setCurrentAccount(account);
     console.log("Connect with account:", account);
+    setupEventListener();
+  };
+
+  const setupEventListener = async () => {
+    try {
+      const { ethereum } = window;
+
+      if (ethereum) {
+        // Same stuff again
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const connectedContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          RandomPuppy.abi,
+          signer
+        );
+
+        // This will essentially "capture" our event when our contract throws it.
+        connectedContract.on("PuppyMinted", (from, tokenId) => {
+          console.log(from, tokenId.toNumber());
+          alert(
+            `Hey there 🙂  We've minted your puppy NFT and sent it to your wallet! Here's the OpenSea link: https://testnets.opensea.io/assets/mumbai/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
+          );
+        });
+
+        console.log("Setup event listener!");
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const switchNetwork = async () => {
@@ -99,6 +133,10 @@ function App() {
     }
   };
 
+  const spinLoading = () => (
+    <ReactLoading type="spin" color="#fff" height={"5%"} width={"5%"} />
+  );
+
   const mintPuppy = async () => {
     const { ethereum } = window;
     if (ethereum) {
@@ -109,17 +147,17 @@ function App() {
         RandomPuppy.abi,
         signer
       );
-
+      setLoading(true);
       let tx = await contract.requestPuppy();
       console.log("Mining ...");
       const receipt = await tx.wait();
       console.log("Mined", tx.hash);
+      setLoading(false);
 
       if (receipt.status === 1) {
         console.log(
-          "Domain minted! https://mumbai.polygonscan.com/tx/" + tx.hash
+          `Domain minted! https://mumbai.polygonscan.com/tx/${tx.hash}`
         );
-        alert()
       } else {
         alert("Transaction Failed 🙁  Please try again!");
       }
@@ -166,14 +204,35 @@ function App() {
             Wallet: {currentAccount.slice(0, 6)}...{currentAccount.slice(-4)}{" "}
           </p>
         </div>
-        <button onClick={mintPuppy} className="button-74">Mint NFT</button>
+        {loading ? (
+          spinLoading()
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <button
+              style={{ margin: "10px" }}
+              onClick={mintPuppy}
+              className="button-74"
+            >
+              Mint NFT
+            </button>
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href="https://testnets.opensea.io/collection/random-puppy-v4"
+            >
+              <button style={{ margin: "10px" }} className="button-74">
+                🌊 View Collection on OpenSea
+              </button>
+            </a>
+          </div>
+        )}
       </Fragment>
     );
   };
 
   useEffect(() => {
     checkIfWalletIsConnected();
-  }, []);
+  });
 
   return (
     <div className="App">
