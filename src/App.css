@@ -20,6 +20,7 @@ a {
   align-items: center;
   min-height: 100vh;
   padding-top: 5vh;
+  padding-bottom: 5vh;  
 }
 
 .title {
@@ -64,6 +65,7 @@ a {
 .puppies {
   display: flex;
   margin: 50px 0;
+  flex-wrap: wrap;
 }
 
 .puppy {
@@ -126,5 +128,11 @@ a {
   .button-74 {
     min-width: 120px;
     padding: 0 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-info {
+    margin-top: 3rem;
   }
 }
